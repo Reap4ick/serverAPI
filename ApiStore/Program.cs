@@ -1,61 +1,66 @@
 using ApiStore.Data;
 using ApiStore.Data.Entities;
+using ApiStore.Mapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Додайте службу DbContext з використанням PostgreSQL
+// Add services to the container.
 builder.Services.AddDbContext<ApiStoreDbContext>(opt =>
     opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Додайте служби контролерів
-builder.Services.AddControllers();
+builder.Services.AddAutoMapper(typeof(AppMapProfile));
 
-// Додайте Swagger/OpenAPI для документації API
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Додайте CORS для дозволу запитів з іншого походження
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReactApp", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173") // Дозволяє запити з порту React-додатка
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
 var app = builder.Build();
 
-// Налаштування HTTP запитів
+app.UseCors(opt =>
+    opt.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Додайте CORS у пайплайн
-app.UseCors("AllowReactApp");
+string imagesDirPath = Path.Combine(Directory.GetCurrentDirectory(), builder.Configuration["ImagesDir"]);
 
-// Додайте Middleware для авторизації (необов'язково, якщо не використовуєте авторизацію)
+if (!Directory.Exists(imagesDirPath))
+{
+    Directory.CreateDirectory(imagesDirPath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imagesDirPath),
+    RequestPath = "/images"
+});
+
 app.UseAuthorization();
 
-// Мапінг контролерів
 app.MapControllers();
 
-// Міграція бази даних і додавання початкових даних
+
+#pragma warning restore ASP0014 // Suggest using top level route registrations
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApiStoreDbContext>();
+    //dbContext.Database.EnsureDeleted();
     dbContext.Database.Migrate();
 
     if (dbContext.Categories.Count() == 0)
     {
         var cat = new CategoryEntity
         {
-            Name = "Собаки",
-            Description = "БоГато Собак",
+            Name = "qwe",
+            Description = "qwewqeqeqeqeq",
             Image = "dog.jpg"
         };
         dbContext.Categories.Add(cat);
