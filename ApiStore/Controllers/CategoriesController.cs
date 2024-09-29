@@ -3,7 +3,13 @@ using ApiStore.Data.Entities;
 using ApiStore.Interfaces;
 using ApiStore.Models.Category;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 
 namespace ApiStore.Controllers
 {
@@ -13,98 +19,62 @@ namespace ApiStore.Controllers
         ApiStoreDbContext context, IImageHulk imageHulk,
         IMapper mapper) : ControllerBase
     {
-        public IImageHulk ImageHulk { get; } = imageHulk;
-
-        // Get the list of categories
         [HttpGet]
         public IActionResult GetList()
         {
-            var list = context.Categories.ToList();
+            var list = context.Categories
+                .ProjectTo<CategoryItemViewModel>(mapper.ConfigurationProvider)
+                .ToList();
             return Ok(list);
         }
 
-        // Create a new category
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] CategoryCreateViewModel model)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var imageName = await ImageHulk.Save(model.Image);
+            var imageName = await imageHulk.Save(model.Image);
             var entity = mapper.Map<CategoryEntity>(model);
             entity.Image = imageName;
             context.Categories.Add(entity);
-            await context.SaveChangesAsync();
-
+            context.SaveChanges();
             return Ok();
         }
 
-        // Get category by id
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var entity = context.Categories.SingleOrDefault(x => x.Id == id);
+            if (entity == null)
+                return NotFound();
+            if (!string.IsNullOrEmpty(entity.Image))
+                imageHulk.Delete(entity.Image);
+            context.Categories.Remove(entity);
+            context.SaveChanges();
+            return Ok();
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Edit([FromForm] CategoryEditViewModel model)
+        {
+            if (model == null) return NotFound();
+            var category = context.Categories.SingleOrDefault(x => x.Id == model.Id);
+            category = mapper.Map(model, category);
+            if (model.Image != null)
+            {
+                imageHulk.Delete(category.Image);
+                string fname = await imageHulk.Save(model.Image);
+                category.Image = fname;
+            }
+            context.SaveChanges();
+            return Ok();
+        }
+
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
             var item = context.Categories
-                .Where(c => c.Id == id)
-                .Select(c => new CategoryEditViewModel
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Description = c.Description,
-                    Image = c.Image
-                })
-                .FirstOrDefault();
-
-            if (item == null)
-                return NotFound(new { message = $"Category with id={id} not found" });
-
+                .ProjectTo<CategoryItemViewModel>(mapper.ConfigurationProvider)
+                .SingleOrDefault(x => x.Id == id);
             return Ok(item);
-        }
-
-        // Edit category
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Edit(int id, [FromForm] CategoryEditViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var item = context.Categories.Find(id);
-            if (item == null)
-                return NotFound(new { message = "Category not found" });
-
-            item.Name = model.Name;
-            item.Description = model.Description;
-
-            // Check if a new image is provided
-            if (model.NewImage != null && model.NewImage.Length > 0)
-            {
-                // Delete old image
-                if (!string.IsNullOrEmpty(item.Image))
-                    ImageHulk.Delete(item.Image);
-
-                // Save new image
-                var newImageName = await ImageHulk.Save(model.NewImage);
-                item.Image = newImageName;
-            }
-
-            await context.SaveChangesAsync();
-            return Ok();
-        }
-
-        // Delete category
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var item = context.Categories.Find(id);
-            if (item == null)
-                return NotFound(new { message = "Category not found" });
-
-            if (!string.IsNullOrEmpty(item.Image))
-                ImageHulk.Delete(item.Image);
-
-            context.Categories.Remove(item);
-            await context.SaveChangesAsync();
-
-            return Ok();
         }
     }
 }

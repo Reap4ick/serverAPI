@@ -8,6 +8,9 @@ namespace ApiStore.Data
         public ApiStoreDbContext(DbContextOptions<ApiStoreDbContext> options)
             : base(options) { }
 
+        public DbSet<ProductEntity> Products { get; set; }
+        public DbSet<ProductImageEntity> ProductImages { get; set; }
+
         public DbSet<CategoryEntity> Categories { get; set; }
     }
 }
