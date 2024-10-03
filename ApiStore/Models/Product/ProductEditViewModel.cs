@@ -8,7 +8,7 @@ namespace ApiStore.Models.Products
     {
         public int Id { get; set; }
         public string Name { get; set; } = String.Empty;
-        [RegularExpression(@"^\d+([\,\.]\d{1,})?$", ErrorMessage = "Provide valid price")]
+/*        [RegularExpression(@"^\d+([\,\.]\d{1,})?$", ErrorMessage = "Provide valid price")]*/
         public string? Price { get; set; }
         public SelectList? CategoryList { get; set; }
         [Display(Name = "Category")]
@@ -23,3 +23,5 @@ namespace ApiStore.Models.Products
         public List<int>? DeletedPhotoIds { get; set; }
     }
 }
+
+

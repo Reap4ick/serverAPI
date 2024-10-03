@@ -105,7 +105,7 @@ using (var scope = app.Services.CreateScope())
                 {
                     Product = product,
                     Image = imageName,
-                    Priotity = i
+                    Priority = i
                 };
                 dbContext.Add(imageProduct);
                 dbContext.SaveChanges();

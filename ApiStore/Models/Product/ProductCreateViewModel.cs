@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -17,7 +18,7 @@ namespace ApiStore.Models.Products
         [Required(ErrorMessage = "Виберіть категорію для продукту.")]
         public int CategoryId { get; set; }  // ID категорії продукту
 
-        // Список файлів для завантаження зображень
+        [BindProperty(Name = "images[]")]
         [Required(ErrorMessage = "Будь ласка, завантажте хоча б одне зображення.")]
         [MaxLength(5, ErrorMessage = "Можна завантажити не більше 5 зображень.")]
         public List<IFormFile> Images { get; set; } = new List<IFormFile>();
