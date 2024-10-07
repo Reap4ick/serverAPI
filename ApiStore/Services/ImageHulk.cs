@@ -2,68 +2,28 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
-using Microsoft.Extensions.Configuration;
-using System.IO;
+using System;
 
 namespace ApiStore.Services
 {
-    public class ImageHulk : IImageHulk
+    public class ImageHulk(IConfiguration configuration) : IImageHulk
     {
-        private readonly IConfiguration _configuration;
-
-        public ImageHulk(IConfiguration configuration)
-        {
-            _configuration = configuration;
-        }
-
-        // Синхронний метод Delete для підтримки старої логіки
         public bool Delete(string fileName)
         {
             try
             {
-                var dir = _configuration["ImagesDir"];
-                var sizes = _configuration["ImageSizes"].Split(",")
+                var dir = configuration["ImagesDir"];
+                var sizes = configuration["ImageSizes"].Split(",")
                     .Select(x => int.Parse(x));
-
+                //int[] sizes = [50, 150, 300, 600, 1200];
                 foreach (var size in sizes)
                 {
                     string dirSave = Path.Combine(Directory.GetCurrentDirectory(),
                         dir, $"{size}_{fileName}");
 
                     if (File.Exists(dirSave))
-                    {
-                        File.Delete(dirSave); // Синхронне видалення
-                    }
+                        File.Delete(dirSave);
                 }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        // Асинхронний метод DeleteAsync для продуктів
-        public async Task<bool> DeleteAsync(string fileName)
-        {
-            try
-            {
-                var dir = _configuration["ImagesDir"];
-                var sizes = _configuration["ImageSizes"].Split(",")
-                    .Select(x => int.Parse(x));
-
-                foreach (var size in sizes)
-                {
-                    string dirSave = Path.Combine(Directory.GetCurrentDirectory(),
-                        dir, $"{size}_{fileName}");
-
-                    if (File.Exists(dirSave))
-                    {
-                        await Task.Run(() => File.Delete(dirSave)); // Асинхронне видалення
-                    }
-                }
-
                 return true;
             }
             catch
@@ -74,40 +34,44 @@ namespace ApiStore.Services
 
         public async Task<string> Save(IFormFile image)
         {
-            string imageName = Guid.NewGuid().ToString() + ".webp";
+            string imageName = String.Empty;
 
             using (MemoryStream ms = new())
             {
                 await image.CopyToAsync(ms);
                 var bytes = ms.ToArray();
-                await SaveByteArrayAsync(bytes, imageName);
+                imageName = SaveByteArray(bytes);
             }
 
             return imageName;
         }
 
-        private async Task SaveByteArrayAsync(byte[] bytes, string imageName)
+        private string SaveByteArray(byte[] bytes)
         {
-            var dir = _configuration["ImagesDir"];
-            var sizes = _configuration["ImageSizes"].Split(",")
-                    .Select(x => int.Parse(x));
+            string imageName = Guid.NewGuid().ToString() + ".webp";
+            var dir = configuration["ImagesDir"];
 
+            var sizes = configuration["ImageSizes"].Split(",")
+                    .Select(x => int.Parse(x));
+            //int[] sizes = [50, 150, 300, 600, 1200];
             foreach (var size in sizes)
             {
                 string dirSave = Path.Combine(Directory.GetCurrentDirectory(),
                     dir, $"{size}_{imageName}");
-
                 using (var imageLoad = Image.Load(bytes))
                 {
+                    // Resize the image (50% of original dimensions)
                     imageLoad.Mutate(x => x.Resize(new ResizeOptions
                     {
                         Size = new Size(size, size),
                         Mode = ResizeMode.Max
                     }));
 
-                    await Task.Run(() => imageLoad.Save(dirSave, new WebpEncoder())); // Асинхронне збереження
+                    // Save the image with compression
+                    imageLoad.Save(dirSave, new WebpEncoder());
                 }
             }
+            return imageName;
         }
 
         public async Task<string> Save(string urlImage)
@@ -117,13 +81,15 @@ namespace ApiStore.Services
             {
                 using (HttpClient client = new HttpClient())
                 {
-                    HttpResponseMessage response = await client.GetAsync(urlImage);
+                    // Send a GET request to the image URL
+                    HttpResponseMessage response = client.GetAsync(urlImage).Result;
 
+                    // Check if the response status code indicates success (e.g., 200 OK)
                     if (response.IsSuccessStatusCode)
                     {
+                        // Read the image bytes from the response content
                         byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                        imageName = Guid.NewGuid().ToString() + ".webp";
-                        await SaveByteArrayAsync(imageBytes, imageName);
+                        imageName = SaveByteArray(imageBytes);
                     }
                 }
             }
@@ -131,8 +97,12 @@ namespace ApiStore.Services
             {
                 return imageName;
             }
-
             return imageName;
+        }
+
+        public Task<bool> DeleteAsync(string fileName)
+        {
+            throw new NotImplementedException();
         }
     }
 }
