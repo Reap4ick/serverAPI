@@ -1,6 +1,6 @@
-﻿namespace ApiStore.Interfaces
+﻿using ApiStore.Data.Entities.Identity;
+
+public interface IJwtTokenService
 {
-    public interface IJwtTokenService
-    {
-    }
+    Task<string> CreateTokenAsync(UserEntity user);
 }

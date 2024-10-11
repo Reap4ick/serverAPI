@@ -1,79 +1,140 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
+﻿using ApiStore.Data.Entities.Identity;
+using ApiStore.Interfaces;
+using ApiStore.Models.Account;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
-using ApiStore.Models;
-using ApiStore.Models.Identity;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
-using ApiStore.Data.Entities.Identity;
 
 namespace ApiStore.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
         private readonly UserManager<UserEntity> _userManager;
-        private readonly SignInManager<UserEntity> _signInManager;
+        private readonly IJwtTokenService _jwtTokenService;
 
-        public AccountController(IConfiguration configuration,
-                                 UserManager<UserEntity> userManager,
-                                 SignInManager<UserEntity> signInManager)
+        public AccountController(UserManager<UserEntity> userManager, IJwtTokenService jwtTokenService)
         {
-            _configuration = configuration;
             _userManager = userManager;
-            _signInManager = signInManager;
+            _jwtTokenService = jwtTokenService;
         }
 
-        [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel login)
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginViewModel model)
         {
-            
-            var user = await _userManager.FindByEmailAsync(login.Username);
-
-            if (user == null)
+            try
             {
-                return Unauthorized(new { message = "Неправильний логін або пароль" });
-            }
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                    return BadRequest("Не вірно вказано дані");
 
-            
-            var result = await _signInManager.CheckPasswordSignInAsync(user, login.Password, false);
-            if (!result.Succeeded)
+                if (!await _userManager.CheckPasswordAsync(user, model.Password))
+                    return BadRequest("Не вірно вказано дані");
+
+                var token = await _jwtTokenService.CreateTokenAsync(user);
+                return Ok(new { token });
+            }
+            catch (Exception ex)
             {
-                return Unauthorized(new { message = "Неправильний логін або пароль" });
+                return BadRequest(ex.Message);
             }
-
-            
-            var token = GenerateJwtToken(user);
-            return Ok(new { Token = token });
         }
 
-        
-        private string GenerateJwtToken(UserEntity user)
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterViewModel model)
         {
-            var claims = new[]
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName)
-            };
+                // Створення нового користувача
+                var user = new UserEntity
+                {
+                    Email = model.Email,
+                    UserName = model.Email,
+                    Firstname = model.Firstname,
+                    Lastname = model.Lastname
+                };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                // Спроба створення користувача з вказаним паролем
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded)
+                    return BadRequest(result.Errors);
 
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddMinutes(30),
-                signingCredentials: creds);
+                // Призначення ролі користувачу
+                await _userManager.AddToRoleAsync(user, "User");
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                // Генерація JWT токену
+                var token = await _jwtTokenService.CreateTokenAsync(user);
+                return Ok(new { token });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Сталася помилка при реєстрації: {ex.Message}");
+            }
+        }
+
+
+        // Метод для отримання профілю користувача
+        [HttpGet("profile")]
+        public IActionResult GetProfile()
+        {
+            try
+            {
+                // Отримуємо заголовок Authorization
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                    return Unauthorized("Необхідно надати JWT токен");
+
+                // Витягуємо сам токен
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+
+                // Парсимо токен
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtToken = tokenHandler.ReadJwtToken(token);
+
+                if (jwtToken == null)
+                    return Unauthorized("Невірний токен");
+
+                // Витягуємо клейми з токена (Payload)
+                var email = jwtToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+                var name = jwtToken.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
+                var roles = jwtToken.Claims.FirstOrDefault(c => c.Type == "roles")?.Value;
+                var exp = jwtToken.Claims.FirstOrDefault(c => c.Type == "exp")?.Value;
+
+                // Повертаємо інформацію з токена
+                return Ok(new
+                {
+                    email,
+                    name,
+                    roles,
+                    exp
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+
+
+        // Метод для логауту
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            try
+            {
+                // Тут можна додати логику для очищення JWT токенів з клієнтської сторони
+                return Ok("Ви успішно вийшли з системи");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }
