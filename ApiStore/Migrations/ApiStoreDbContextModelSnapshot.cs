@@ -22,6 +22,34 @@ namespace ApiStore.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ApiStore.Data.Entities.CartEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("UserEntityId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserEntityId");
+
+                    b.ToTable("tblCarts");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.CategoryEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -322,6 +350,55 @@ namespace ApiStore.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("OrderEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("OrderProductEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderProducts");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.Identity.UserRoleEntity", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUserRole<int>");
@@ -329,6 +406,13 @@ namespace ApiStore.Migrations
                     b.HasIndex("RoleId");
 
                     b.HasDiscriminator().HasValue("UserRoleEntity");
+                });
+
+            modelBuilder.Entity("ApiStore.Data.Entities.CartEntity", b =>
+                {
+                    b.HasOne("ApiStore.Data.Entities.Identity.UserEntity", null)
+                        .WithMany("Carts")
+                        .HasForeignKey("UserEntityId");
                 });
 
             modelBuilder.Entity("ApiStore.Data.Entities.ProductEntity", b =>
@@ -389,6 +473,25 @@ namespace ApiStore.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OrderProductEntity", b =>
+                {
+                    b.HasOne("OrderEntity", "Order")
+                        .WithMany("OrderProducts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ApiStore.Data.Entities.ProductEntity", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.Identity.UserRoleEntity", b =>
                 {
                     b.HasOne("ApiStore.Data.Entities.Identity.RoleEntity", "Role")
@@ -420,12 +523,19 @@ namespace ApiStore.Migrations
 
             modelBuilder.Entity("ApiStore.Data.Entities.Identity.UserEntity", b =>
                 {
+                    b.Navigation("Carts");
+
                     b.Navigation("UserRoles");
                 });
 
             modelBuilder.Entity("ApiStore.Data.Entities.ProductEntity", b =>
                 {
                     b.Navigation("ProductImages");
+                });
+
+            modelBuilder.Entity("OrderEntity", b =>
+                {
+                    b.Navigation("OrderProducts");
                 });
 #pragma warning restore 612, 618
         }
