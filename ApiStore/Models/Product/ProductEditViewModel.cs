@@ -21,6 +21,8 @@ namespace ApiStore.Models.Products
 
         [Display(Name = "Delete image")]
         public List<int>? DeletedPhotoIds { get; set; }
+
+        public List<string>? DeletedPhotoNames { get; set; } // Імена файлів для видалення
     }
 }
 
