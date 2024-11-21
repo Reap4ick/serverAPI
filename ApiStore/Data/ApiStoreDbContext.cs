@@ -17,6 +17,9 @@ namespace ApiStore.Data
         public DbSet<OrderEntity> Orders { get; set; }
         public DbSet<OrderProductEntity> OrderProducts { get; set; }  // Додано зв'язок між замовленням і продуктами
 
+
+        public DbSet<ProductDescImageEntity> ProductDescImages { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

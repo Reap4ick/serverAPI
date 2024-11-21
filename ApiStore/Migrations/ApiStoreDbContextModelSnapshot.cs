@@ -184,6 +184,32 @@ namespace ApiStore.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ApiStore.Data.Entities.ProductDescImageEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DateCreate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Image")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductDescImages");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.ProductEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -194,6 +220,9 @@ namespace ApiStore.Migrations
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -415,6 +444,15 @@ namespace ApiStore.Migrations
                         .HasForeignKey("UserEntityId");
                 });
 
+            modelBuilder.Entity("ApiStore.Data.Entities.ProductDescImageEntity", b =>
+                {
+                    b.HasOne("ApiStore.Data.Entities.ProductEntity", "Product")
+                        .WithMany("ProductDescImages")
+                        .HasForeignKey("ProductId");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.ProductEntity", b =>
                 {
                     b.HasOne("ApiStore.Data.Entities.CategoryEntity", "Category")
@@ -530,6 +568,8 @@ namespace ApiStore.Migrations
 
             modelBuilder.Entity("ApiStore.Data.Entities.ProductEntity", b =>
                 {
+                    b.Navigation("ProductDescImages");
+
                     b.Navigation("ProductImages");
                 });
 

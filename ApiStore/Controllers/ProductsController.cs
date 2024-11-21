@@ -1,7 +1,9 @@
 ﻿using ApiStore.Data;
 using ApiStore.Data.Entities;
 using ApiStore.Interfaces;
+using ApiStore.Models.Product;
 using ApiStore.Models.Products;
+using ApiStore.Services;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +43,14 @@ namespace ApiStore.Controllers
         {
             var entity = _mapper.Map<ProductEntity>(model);
             _context.Products.Add(entity);
-            await _context.SaveChangesAsync();
+            _context.SaveChanges();
+
+            if (model.ImagesDescIds.Any())
+            {
+                await _context.ProductDescImages
+                    .Where(x => model.ImagesDescIds.Contains(x.Id))
+                    .ForEachAsync(x => x.ProductId = entity.Id);
+            }
 
             if (model.Images != null)
             {
@@ -56,11 +65,10 @@ namespace ApiStore.Controllers
                     };
                     p++;
                     _context.ProductImages.Add(pi);
+                    await _context.SaveChangesAsync();
                 }
-                await _context.SaveChangesAsync();
             }
-
-            return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
+            return Created();
         }
 
         [HttpPut("{id}")]
@@ -71,6 +79,7 @@ namespace ApiStore.Controllers
 
             var product = await _context.Products
                 .Include(p => p.ProductImages)
+                .Include(p => p.ProductDescImages)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
@@ -116,6 +125,46 @@ namespace ApiStore.Controllers
                 }
             }
 
+            // Обробка нових зображень для опису
+            if (model.NewDescImages != null && model.NewDescImages.Any())
+            {
+                foreach (var descImg in model.NewDescImages)
+                {
+                    if (descImg.Length > 0)
+                    {
+                        string fname = await _imageHulk.Save(descImg);
+                        var descImgEntity = new ProductDescImageEntity
+                        {
+                            Image = fname,
+                            ProductId = product.Id
+                        };
+                        _context.ProductDescImages.Add(descImgEntity);
+                    }
+                }
+            }
+
+            // Обробка видалених зображень із опису
+            if (model.DeletedDescImageNames != null && model.DeletedDescImageNames.Any())
+            {
+                var descImages = await _context.ProductDescImages
+                    .Where(di => model.DeletedDescImageNames.Contains(di.Image))
+                    .ToListAsync();
+
+                _context.ProductDescImages.RemoveRange(descImages);
+
+                foreach (var descImg in descImages)
+                {
+                    try
+                    {
+                        await _imageHulk.DeleteAsync(descImg.Image);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete description image: {descImg.Image}, Error: {ex.Message}");
+                    }
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok();
@@ -140,23 +189,110 @@ namespace ApiStore.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var product = await _context.Products
-                .Include(x => x.ProductImages)
-                .SingleOrDefaultAsync(x => x.Id == id);
-
-            if (product == null) return NotFound();
-
-            if (product.ProductImages != null)
+            try
             {
-                foreach (var p in product.ProductImages)
-                {
-                    await _imageHulk.DeleteAsync(p.Image);
-                }
-            }
+                // Отримання продукту з пов'язаними зображеннями
+                var product = await _context.Products
+                    .Include(x => x.ProductImages)
+                    .FirstOrDefaultAsync(x => x.Id == id);
 
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-            return Ok();
+                if (product == null)
+                {
+                    return NotFound();
+                }
+
+                // Видалення зображень опису з таблиці ProductDescImages
+                var descImages = await _context.ProductDescImages
+                    .Where(x => x.ProductId == id)
+                    .ToListAsync();
+
+                foreach (var descImage in descImages)
+                {
+                    try
+                    {
+                        // Видалення фізичних файлів зображень
+                        await _imageHulk.DeleteAsync(descImage.Image);
+
+                        // Видалення запису з бази даних
+                        _context.ProductDescImages.Remove(descImage);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to delete description image: {descImage.Image}, Error: {ex.Message}");
+                    }
+                }
+
+                // Видалення зображень продукту
+                if (product.ProductImages != null)
+                {
+                    foreach (var p in product.ProductImages)
+                    {
+                        try
+                        {
+                            await _imageHulk.DeleteAsync(p.Image);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to delete product image: {p.Image}, Error: {ex.Message}");
+                        }
+                    }
+                }
+
+                // Видалення самого продукту
+                _context.Products.Remove(product);
+
+                // Збереження змін у базі даних
+                await _context.SaveChangesAsync();
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // Логування повної помилки
+                Console.WriteLine($"Error while deleting product: {ex.Message}");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+
+
+        /*
+                [HttpPost("SaveDescription")]
+                public async Task<IActionResult> SaveProductDescription([FromBody] ProductDescriptionViewModel model)
+                {
+                    // Знаходимо продукт за ID
+                    var product = await _context.Products.FindAsync(model.ProductId);
+
+                    if (product == null)
+                        return NotFound("Product not found");   
+
+                    // Оновлюємо опис
+                    product.Description = model.Description;
+
+                    // Зберігаємо зміни
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new { message = "Description updated successfully" });
+                }
+
+        */
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadDescImage([FromForm] ProductDescImageUploadViewModel model)
+        {
+            if (model.Image != null)
+            {
+                var pdi = new ProductDescImageEntity
+                {
+                    Image = await _imageHulk.Save(model.Image),
+                    DateCreate = DateTime.Now.ToUniversalTime(),
+
+                };
+                _context.ProductDescImages.Add(pdi);
+                await _context.SaveChangesAsync();
+                return Ok(_mapper.Map<ProductDescImageIdViewModel>(pdi));
+            }
+            return BadRequest();
         }
     }
+
 }

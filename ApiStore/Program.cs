@@ -203,7 +203,7 @@ using (var scope = app.Services.CreateScope())
             if (!outcome.Succeeded) Console.WriteLine($"Failed to create role: {role.Name}");
         }
     }
-
+  
     // seed users Gen
     if (dbContext.Users.Count() == 0)
     {

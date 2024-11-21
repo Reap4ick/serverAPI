@@ -14,6 +14,7 @@ namespace ApiStore.Models.Products
         [Required(ErrorMessage = "Ціна продукту є обов'язковою.")]
         [Range(0.01, double.MaxValue, ErrorMessage = "Ціна повинна бути більшою за нуль.")]
         public decimal Price { get; set; }
+        public string? Description { get; set; }
 
         [Required(ErrorMessage = "Виберіть категорію для продукту.")]
         public int CategoryId { get; set; }  // ID категорії продукту
@@ -22,5 +23,7 @@ namespace ApiStore.Models.Products
         [Required(ErrorMessage = "Будь ласка, завантажте хоча б одне зображення.")]
         [MaxLength(5, ErrorMessage = "Можна завантажити не більше 5 зображень.")]
         public List<IFormFile> Images { get; set; } = new List<IFormFile>();
+
+        public List<int> ImagesDescIds { get; set; } = [];
     }
 }

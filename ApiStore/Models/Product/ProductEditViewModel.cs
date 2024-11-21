@@ -23,7 +23,29 @@ namespace ApiStore.Models.Products
         public List<int>? DeletedPhotoIds { get; set; }
 
         public List<string>? DeletedPhotoNames { get; set; } // Імена файлів для видалення
+
+        public string Description { get; set; } = String.Empty;
+
+        public IEnumerable<string> DeletedDescImageNames { get; set; }
+
+        public IEnumerable<IFormFile> NewDescImages { get; set; }
+
     }
 }
 
+/*
+﻿using Microsoft.AspNetCore.Mvc;
 
+namespace ApiStore.Models.Product
+{
+    public class ProductEditViewModel
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public decimal Price { get; set; }
+        public int CategoryId { get; set; }
+        //public List<string>? RemoveImages { get; set; }
+        [BindProperty(Name = "images[]")]
+        public List<IFormFile>? Images { get; set; }
+    }
+}*/

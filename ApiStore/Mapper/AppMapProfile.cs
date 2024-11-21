@@ -1,5 +1,6 @@
-﻿using ApiStore.Data.Entities;
+﻿﻿using ApiStore.Data.Entities;
 using ApiStore.Models.Category;
+using ApiStore.Models.Product;
 using ApiStore.Models.Products;
 using AutoMapper;
 
@@ -33,7 +34,9 @@ namespace ApiStore.Mapper
 
             // Додаємо мапінг для завантаження продукту на редагування
             CreateMap<ProductEntity, ProductEditViewModel>()
-                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.ProductImages)); // Передаємо зображення
+                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.ProductImages)); // Передаємо зображення\\
+
+            CreateMap<ProductDescImageEntity, ProductDescImageIdViewModel>();
         }
     }
 }
