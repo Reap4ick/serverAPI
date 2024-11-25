@@ -26,9 +26,9 @@ namespace ApiStore.Models.Products
 
         public string Description { get; set; } = String.Empty;
 
-        public IEnumerable<string> DeletedDescImageNames { get; set; }
+/*        public IEnumerable<string> DeletedDescImageNames { get; set; }
 
-        public IEnumerable<IFormFile> NewDescImages { get; set; }
+        public IEnumerable<IFormFile> NewDescImages { get; set; }*/
 
     }
 }

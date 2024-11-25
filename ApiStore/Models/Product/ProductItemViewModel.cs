@@ -9,5 +9,7 @@
         public List<string>? Images { get; set; }
         public string Description { get; set; } = String.Empty;
 
+        public string CategoryName { get; set; } = string.Empty;
+
     }
 }

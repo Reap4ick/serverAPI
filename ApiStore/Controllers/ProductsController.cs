@@ -125,44 +125,15 @@ namespace ApiStore.Controllers
                 }
             }
 
-            // Обробка нових зображень для опису
-            if (model.NewDescImages != null && model.NewDescImages.Any())
+
+            // Перевірка наявності записів із ProductId = null в таблиці ProductDescImages
+            var orphanedDescImages = await _context.ProductDescImages
+                .Where(pdi => pdi.ProductId == null)
+                .ToListAsync();
+
+            if (orphanedDescImages.Any())
             {
-                foreach (var descImg in model.NewDescImages)
-                {
-                    if (descImg.Length > 0)
-                    {
-                        string fname = await _imageHulk.Save(descImg);
-                        var descImgEntity = new ProductDescImageEntity
-                        {
-                            Image = fname,
-                            ProductId = product.Id
-                        };
-                        _context.ProductDescImages.Add(descImgEntity);
-                    }
-                }
-            }
-
-            // Обробка видалених зображень із опису
-            if (model.DeletedDescImageNames != null && model.DeletedDescImageNames.Any())
-            {
-                var descImages = await _context.ProductDescImages
-                    .Where(di => model.DeletedDescImageNames.Contains(di.Image))
-                    .ToListAsync();
-
-                _context.ProductDescImages.RemoveRange(descImages);
-
-                foreach (var descImg in descImages)
-                {
-                    try
-                    {
-                        await _imageHulk.DeleteAsync(descImg.Image);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Failed to delete description image: {descImg.Image}, Error: {ex.Message}");
-                    }
-                }
+                _context.ProductDescImages.RemoveRange(orphanedDescImages);
             }
 
             await _context.SaveChangesAsync();
@@ -186,7 +157,7 @@ namespace ApiStore.Controllers
             return Ok(item);
         }
 
-        [HttpDelete("{id}")]
+        /*[HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -252,8 +223,31 @@ namespace ApiStore.Controllers
                 Console.WriteLine($"Error while deleting product: {ex.Message}");
                 return StatusCode(500, "Internal server error");
             }
-        }
+        }*/
 
+
+
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var product = _context.Products
+                .Include(x => x.ProductImages)
+                .Include(x => x.ProductDescImages)
+                .SingleOrDefault(x => x.Id == id);
+            if (product == null) return NotFound();
+
+            if (product.ProductImages != null)
+                foreach (var p in product.ProductImages)
+                    _imageHulk.Delete(p.Image);
+
+            if (product.ProductDescImages != null)
+                foreach (var p in product.ProductDescImages)
+                    _imageHulk.Delete(p.Image);
+
+            _context.Products.Remove(product);
+            _context.SaveChanges();
+            return Ok();
+        }
 
 
         /*
