@@ -184,6 +184,30 @@ namespace ApiStore.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("ApiStore.Data.Entities.PostsEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Posts");
+                });
+
             modelBuilder.Entity("ApiStore.Data.Entities.ProductDescImageEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -581,3 +605,4 @@ namespace ApiStore.Migrations
         }
     }
 }
+//Posts

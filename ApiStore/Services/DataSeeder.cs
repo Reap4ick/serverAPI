@@ -23,6 +23,7 @@ namespace ApiStore.Services
             // Ensure database is created and migrated
             await _context.Database.MigrateAsync();
 
+
             // Check if any categories exist, and create a default category if necessary
             if (!_context.Categories.Any())
             {
@@ -72,6 +73,76 @@ namespace ApiStore.Services
                         }
                     }
                 };
+
+
+                // Seed posts if not exist
+                if (!_context.Posts.Any())
+                {
+                    var posts = new List<PostsEntity>
+                {
+                    new PostsEntity
+                    {
+                        Title = "Post 1",
+                        Body = "This is the body of post 1",
+                        DateCreated = DateTime.Now
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 2",
+                        Body = "This is the body of post 2",
+                        DateCreated = DateTime.Now.AddMinutes(-5)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 3",
+                        Body = "This is the body of post 3",
+                        DateCreated = DateTime.Now.AddMinutes(-10)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 4",
+                        Body = "This is the body of post 4",
+                        DateCreated = DateTime.Now.AddMinutes(-15)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 5",
+                        Body = "This is the body of post 5",
+                        DateCreated = DateTime.Now.AddMinutes(-20)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 6",
+                        Body = "This is the body of post 6",
+                        DateCreated = DateTime.Now.AddMinutes(-25)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 7",
+                        Body = "This is the body of post 7",
+                        DateCreated = DateTime.Now.AddMinutes(-30)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 8",
+                        Body = "This is the body of post 8",
+                        DateCreated = DateTime.Now.AddMinutes(-35)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 9",
+                        Body = "This is the body of post 9",
+                        DateCreated = DateTime.Now.AddMinutes(-40)
+                    },
+                    new PostsEntity
+                    {
+                        Title = "Post 10",
+                        Body = "This is the body of post 10",
+                        DateCreated = DateTime.Now.AddMinutes(-45)
+                    }
+                    };
+                        _context.Posts.AddRange(posts); // Додаємо пости до контексту
+                }
 
                 _context.Products.AddRange(products);
                 await _context.SaveChangesAsync();

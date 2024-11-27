@@ -1,5 +1,6 @@
 ﻿﻿using ApiStore.Data.Entities;
 using ApiStore.Models.Category;
+using ApiStore.Models.Post;
 using ApiStore.Models.Product;
 using ApiStore.Models.Products;
 using AutoMapper;
@@ -38,6 +39,11 @@ namespace ApiStore.Mapper
                 .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.ProductImages)); // Передаємо зображення\\
 
             CreateMap<ProductDescImageEntity, ProductDescImageIdViewModel>();
+
+
+            //CreateMap<PostCreateViewModel, PostsEntity>();
+            CreateMap<PostEditDto, PostsEntity>();
+            CreateMap<PostsEntity, PostItemViewModel>();
         }
     }
 }

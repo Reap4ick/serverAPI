@@ -17,6 +17,7 @@ namespace ApiStore.Data
         public DbSet<OrderEntity> Orders { get; set; }
         public DbSet<OrderProductEntity> OrderProducts { get; set; }  // Додано зв'язок між замовленням і продуктами
 
+        public DbSet<PostsEntity> Posts { get; set; }
 
         public DbSet<ProductDescImageEntity> ProductDescImages { get; set; }
 
